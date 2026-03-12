@@ -309,9 +309,9 @@ function initWords() {
     [allWords[i], allWords[j]] = [allWords[j], allWords[i]];
   }
 
-  // Place shuffled words in a structured left-to-right, top-to-bottom grid
+  // Place shuffled words in a 10×10 grid
   // Start at column 4 to leave room for the completed zone on the left
-  const COLS = 18;
+  const COLS = 10;
   const startCol = 4;
   const offsetX = 20, offsetY = 20;
 
@@ -594,8 +594,6 @@ function checkComplete(sObj) {
         sObj.complete = true;
         completedTopics++;
         progressEl.textContent = completedTopics + ' / 10 topics solved';
-        // Move to completed zone after animation
-        setTimeout(() => moveToCompletedZone(sObj), 300);
         spawnConfetti();
         if (completedTopics === 10) {
           setTimeout(() => showWin(), 800);
