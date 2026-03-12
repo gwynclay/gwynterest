@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Stack Puzzle</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #F5F0E8;
+    font-family: Georgia, 'Times New Roman', serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+  }
+
+  #ui-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 44px;
+    background: #EDE7D9;
+    border-bottom: 1.5px solid #C4B99A;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 18px;
+    z-index: 1000;
+  }
+
+  #ui-bar h1 {
+    font-size: 15px;
+    font-weight: bold;
+    color: #3A2E1E;
+    letter-spacing: 0.5px;
+  }
+
+  #progress-text {
+    font-size: 12px;
+    color: #6B5A3E;
+  }
+
+  #zoom-controls {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #zoom-controls button {
+    width: 26px; height: 26px;
+    border: 1.5px solid #C4B99A;
+    background: #F5F0E8;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 15px;
+    color: #3A2E1E;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  #zoom-controls button:hover { background: #EDE7D9; }
+
+  #zoom-label {
+    font-size: 12px;
+    color: #6B5A3E;
+    min-width: 38px;
+    text-align: center;
+  }
+
+  #reset-btn {
+    padding: 4px 10px;
+    border: 1.5px solid #C4B99A;
+    background: #F5F0E8;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #3A2E1E;
+    font-family: Georgia, serif;
+  }
+  #reset-btn:hover { background: #EDE7D9; }
+
+  #canvas-wrap {
+    position: fixed;
+    top: 44px; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+    cursor: grab;
+  }
+  #canvas-wrap.panning { cursor: grabbing; }
+
+  #canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 2800px;
+    height: 2200px;
+    transform-origin: 0 0;
+  }
+
+  /* Completed zone */
+  #completed-zone {
+    position: absolute;
+    top: 18px; left: 18px;
+    width: 340px;
+    min-height: 80px;
+    background: rgba(245,240,232,0.6);
+    border: 1.5px dashed #C4B99A;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    z-index: 10;
+  }
+
+  .word-tile {
+    position: absolute;
+    background: #F5F0E8;
+    border: 1.5px solid #3A2E1E;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 13px;
+    color: #1A1008;
+    font-family: Georgia, serif;
+    cursor: grab;
+    white-space: nowrap;
+    z-index: 100;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.12);
+    transition: box-shadow 0.1s;
+    min-width: 64px;
+    text-align: center;
+    touch-action: none;
+  }
+  .word-tile:hover { box-shadow: 2px 2px 6px rgba(0,0,0,0.18); }
+  .word-tile.dragging {
+    cursor: grabbing;
+    box-shadow: 4px 4px 12px rgba(0,0,0,0.28);
+    z-index: 9999;
+    opacity: 0.92;
+  }
+  .word-tile.drop-target {
+    border-color: #8B7355;
+    box-shadow: 0 0 0 2px #C4B99A;
+  }
+
+  .stack {
+    position: absolute;
+    cursor: grab;
+    z-index: 100;
+    touch-action: none;
+  }
+  .stack.dragging {
+    cursor: grabbing;
+    z-index: 9999;
+  }
+  .stack.drop-target .stack-top {
+    border-color: #8B7355;
+    box-shadow: 0 0 0 2px #C4B99A;
+  }
+
+  .stack-card {
+    position: absolute;
+    background: #F5F0E8;
+    border: 1.5px solid #3A2E1E;
+    border-radius: 5px;
+    width: 90px;
+    height: 32px;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.10);
+  }
+
+  .stack-top {
+    position: relative;
+    background: #F5F0E8;
+    border: 1.5px solid #3A2E1E;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 13px;
+    color: #1A1008;
+    font-family: Georgia, serif;
+    white-space: nowrap;
+    min-width: 64px;
+    text-align: center;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.14);
+    z-index: 2;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stack-count {
+    display: inline-block;
+    margin-left: 5px;
+    background: #3A2E1E;
+    color: #F5F0E8;
+    border-radius: 10px;
+    font-size: 10px;
+    padding: 0 5px;
+    line-height: 16px;
+    min-width: 16px;
+    text-align: center;
+  }
+
+  .stack.complete .stack-top {
+    background: #3A2E1E;
+    color: #F5F0E8;
+    font-weight: bold;
+    font-size: 12px;
+  }
+  .stack.complete .stack-card {
+    background: #5A4A2E;
+    border-color: #1A1008;
+  }
+
+  .stack-label {
+    font-size: 11px;
+    color: #6B5A3E;
+    text-align: center;
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  /* Confetti particle */
+  .confetti {
+    position: fixed;
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 9998;
+    animation: fall 1.8s ease-in forwards;
+  }
+  @keyframes fall {
+    0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="ui-bar">
+  <h1>Word Stack Puzzle</h1>
+  <span id="progress-text">0 / 10 topics solved</span>
+  <div id="zoom-controls">
+    <button id="zoom-out">−</button>
+    <span id="zoom-label">70%</span>
+    <button id="zoom-in">+</button>
+    <button id="zoom-fit">Fit</button>
+  </div>
+  <button id="reset-btn">Reset</button>
+</div>
+
+<div id="canvas-wrap">
+  <div id="canvas">
+    <div id="completed-zone"></div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+const TOPICS = {
+  "Animals":     ["Lion","Tiger","Elephant","Giraffe","Zebra","Penguin","Dolphin","Eagle","Cobra","Wolf"],
+  "Countries":   ["France","Brazil","Japan","Canada","Egypt","India","Australia","Mexico","Norway","Kenya"],
+  "Colors":      ["Crimson","Azure","Emerald","Amber","Violet","Scarlet","Indigo","Teal","Coral","Ochre"],
+  "Sports":      ["Tennis","Cricket","Football","Basketball","Rugby","Golf","Swimming","Cycling","Boxing","Archery"],
+  "Fruits":      ["Mango","Papaya","Lychee","Guava","Durian","Fig","Kiwi","Pomelo","Persimmon","Jackfruit"],
+  "Planets":     ["Mercury","Venus","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto","Ceres","Eris"],
+  "Instruments": ["Violin","Cello","Trumpet","Oboe","Harp","Tuba","Banjo","Sitar","Lute","Zither"],
+  "Elements":    ["Oxygen","Carbon","Helium","Nitrogen","Iron","Gold","Silver","Copper","Uranium","Neon"],
+  "Mythology":   ["Zeus","Thor","Ra","Odin","Athena","Loki","Anubis","Poseidon","Freya","Ares"],
+  "Flowers":     ["Rose","Tulip","Orchid","Dahlia","Peony","Lotus","Jasmine","Lavender","Iris","Magnolia"]
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let zoom = 0.7;
+let panX = 0, panY = 0;
+let words = [];   // { id, word, topic, el, x, y }
+let stacks = [];  // { id, words:[{word,topic}], el, x, y, complete }
+let completedTopics = 0;
+let idCounter = 0;
+
+const canvas     = document.getElementById('canvas');
+const wrap       = document.getElementById('canvas-wrap');
+const zoomLabel  = document.getElementById('zoom-label');
+const progressEl = document.getElementById('progress-text');
+const completedZone = document.getElementById('completed-zone');
+
+// ─── LAYOUT ───────────────────────────────────────────────────────────────────
+function nextId() { return ++idCounter; }
+
+const GRID_COL = 120; // px between grid columns
+const GRID_ROW = 48;  // px between grid rows
+
+function snapToGrid(x, y) {
+  return {
+    x: Math.round(x / GRID_COL) * GRID_COL,
+    y: Math.round(y / GRID_ROW) * GRID_ROW
+  };
+}
+
+function initWords() {
+  const allWords = [];
+  for (const [topic, list] of Object.entries(TOPICS)) {
+    for (const word of list) {
+      allWords.push({ word, topic });
+    }
+  }
+  // Shuffle
+  for (let i = allWords.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [allWords[i], allWords[j]] = [allWords[j], allWords[i]];
+  }
+
+  // Build a grid of available cells (avoid top-left completed zone: cols 0-2, rows 0-3)
+  const COLS = 22, ROWS = 44;
+  const startCol = 4; // leave columns 0-3 for completed zone
+  const cells = [];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (c < startCol && r < 5) continue; // skip completed zone
+      cells.push({ c, r });
+    }
+  }
+  // Shuffle cells and take first 100
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+
+  const offsetX = 20, offsetY = 20;
+  allWords.forEach((w, i) => {
+    const cell = cells[i] || { c: i % COLS, r: Math.floor(i / COLS) };
+    const x = offsetX + cell.c * GRID_COL;
+    const y = offsetY + cell.r * GRID_ROW;
+    const obj = { id: nextId(), word: w.word, topic: w.topic, x, y, el: null };
+    words.push(obj);
+    createWordEl(obj);
+  });
+}
+
+function createWordEl(wObj) {
+  const el = document.createElement('div');
+  el.className = 'word-tile';
+  el.textContent = wObj.word;
+  el.style.left = wObj.x + 'px';
+  el.style.top  = wObj.y + 'px';
+  el.dataset.id = wObj.id;
+  canvas.appendChild(el);
+  wObj.el = el;
+  makeDraggable(el, 'word', wObj.id);
+}
+
+// ─── STACK RENDERING ──────────────────────────────────────────────────────────
+const CARD_OFFSET = 3; // px per stacked card visible behind
+const MAX_VISIBLE_BEHIND = 6;
+
+function renderStack(sObj) {
+  if (sObj.el) sObj.el.remove();
+  const el = document.createElement('div');
+  el.className = 'stack' + (sObj.complete ? ' complete' : '');
+  el.dataset.sid = sObj.id;
+
+  const behind = Math.min(sObj.words.length - 1, MAX_VISIBLE_BEHIND);
+  const totalH = behind * CARD_OFFSET + 32;
+  el.style.width = '110px';
+  el.style.height = (totalH + 20) + 'px'; // extra for label
+
+  // Shadow cards
+  for (let i = behind; i >= 1; i--) {
+    const card = document.createElement('div');
+    card.className = 'stack-card';
+    card.style.top  = (behind - i) * CARD_OFFSET + 'px';
+    card.style.left = '10px';
+    el.appendChild(card);
+  }
+
+  // Top card
+  const top = document.createElement('div');
+  top.className = 'stack-top';
+  if (sObj.complete) {
+    // Show topic name
+    top.textContent = sObj.words[0].topic;
+  } else {
+    const topWord = sObj.words[sObj.words.length - 1];
+    top.innerHTML = topWord.word + '<span class="stack-count">' + sObj.words.length + '</span>';
+  }
+  top.style.top  = behind * CARD_OFFSET + 'px';
+  top.style.left = '10px';
+  top.style.width = '90px';
+  el.appendChild(top);
+
+  el.style.left = sObj.x + 'px';
+  el.style.top  = sObj.y + 'px';
+  canvas.appendChild(el);
+  sObj.el = el;
+
+  makeDraggable(el, 'stack', sObj.id);
+}
+
+// ─── DRAG & DROP ──────────────────────────────────────────────────────────────
+let dragState = null;
+// dragState: { type:'word'|'stack', id, startCanvasX, startCanvasY, startMouseX, startMouseY, origEl }
+
+function canvasCoords(clientX, clientY) {
+  const rect = wrap.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left - panX) / zoom,
+    y: (clientY - rect.top  - panY) / zoom
+  };
+}
+
+function makeDraggable(el, type, id) {
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    startDrag(e.clientX, e.clientY, type, id, el);
+  });
+}
+
+function startDrag(clientX, clientY, type, id, el) {
+  el.classList.add('dragging');
+  const cc = canvasCoords(clientX, clientY);
+  let objX, objY;
+  if (type === 'word') {
+    const wObj = words.find(w => w.id === id);
+    objX = wObj.x; objY = wObj.y;
+  } else {
+    const sObj = stacks.find(s => s.id === id);
+    objX = sObj.x; objY = sObj.y;
+  }
+  dragState = {
+    type, id, el,
+    startObjX: objX, startObjY: objY,
+    startMouseCX: cc.x, startMouseCY: cc.y
+  };
+  // bring to front
+  el.style.zIndex = 9999;
+}
+
+document.addEventListener('mousemove', e => {
+  if (!dragState) return;
+  const cc = canvasCoords(e.clientX, e.clientY);
+  const dx = cc.x - dragState.startMouseCX;
+  const dy = cc.y - dragState.startMouseCY;
+  const nx = dragState.startObjX + dx;
+  const ny = dragState.startObjY + dy;
+  dragState.el.style.left = nx + 'px';
+  dragState.el.style.top  = ny + 'px';
+
+  // Highlight drop targets
+  clearDropTargets();
+  const target = findDropTarget(e.clientX, e.clientY, dragState.type, dragState.id);
+  if (target) target.el.classList.add('drop-target');
+});
+
+document.addEventListener('mouseup', e => {
+  if (!dragState) return;
+  dragState.el.classList.remove('dragging');
+  dragState.el.style.zIndex = '';
+
+  const cc = canvasCoords(e.clientX, e.clientY);
+  const dx = cc.x - dragState.startMouseCX;
+  const dy = cc.y - dragState.startMouseCY;
+  const nx = dragState.startObjX + dx;
+  const ny = dragState.startObjY + dy;
+
+  clearDropTargets();
+  const target = findDropTarget(e.clientX, e.clientY, dragState.type, dragState.id);
+
+  if (target) {
+    performDrop(dragState.type, dragState.id, target);
+  } else {
+    // Snap to grid
+    const snapped = snapToGrid(nx, ny);
+    if (dragState.type === 'word') {
+      const wObj = words.find(w => w.id === dragState.id);
+      if (wObj) { wObj.x = snapped.x; wObj.y = snapped.y; }
+    } else {
+      const sObj = stacks.find(s => s.id === dragState.id);
+      if (sObj) { sObj.x = snapped.x; sObj.y = snapped.y; }
+    }
+    dragState.el.style.left = snapped.x + 'px';
+    dragState.el.style.top  = snapped.y + 'px';
+  }
+  dragState = null;
+});
+
+function clearDropTargets() {
+  document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+}
+
+function elBoundsCanvas(el) {
+  // Get bounding rect of element in canvas coords
+  const rect = el.getBoundingClientRect();
+  const wrapRect = wrap.getBoundingClientRect();
+  return {
+    x: (rect.left - wrapRect.left - panX) / zoom,
+    y: (rect.top  - wrapRect.top  - panY) / zoom,
+    w: rect.width  / zoom,
+    h: rect.height / zoom,
+    cx: (rect.left + rect.width/2  - wrapRect.left - panX) / zoom,
+    cy: (rect.top  + rect.height/2 - wrapRect.top  - panY) / zoom,
+  };
+}
+
+function findDropTarget(clientX, clientY, dragType, dragId) {
+  // Check if mouse is over a word tile or stack (that isn't the dragged item)
+  const cc = canvasCoords(clientX, clientY);
+
+  // Check stacks first (they're larger targets)
+  for (const sObj of stacks) {
+    if (sObj.complete) continue; // can't drop onto complete stack (already solved)
+    if (dragType === 'stack' && sObj.id === dragId) continue;
+    const b = elBoundsCanvas(sObj.el);
+    if (cc.x >= b.x && cc.x <= b.x + b.w && cc.y >= b.y && cc.y <= b.y + b.h) {
+      return { type: 'stack', id: sObj.id, el: sObj.el };
+    }
+  }
+
+  // Check word tiles
+  for (const wObj of words) {
+    if (dragType === 'word' && wObj.id === dragId) continue;
+    const b = elBoundsCanvas(wObj.el);
+    if (cc.x >= b.x && cc.x <= b.x + b.w && cc.y >= b.y && cc.y <= b.y + b.h) {
+      return { type: 'word', id: wObj.id, el: wObj.el };
+    }
+  }
+
+  return null;
+}
+
+function performDrop(dragType, dragId, target) {
+  if (dragType === 'word' && target.type === 'word') {
+    // word → word: create new stack
+    const wDrag   = words.find(w => w.id === dragId);
+    const wTarget = words.find(w => w.id === target.id);
+    createStack([wTarget, wDrag], wTarget.x, wTarget.y);
+    removeWord(wDrag.id);
+    removeWord(wTarget.id);
+
+  } else if (dragType === 'word' && target.type === 'stack') {
+    // word → stack: add word to stack
+    const wDrag = words.find(w => w.id === dragId);
+    const sObj  = stacks.find(s => s.id === target.id);
+    sObj.words.push({ word: wDrag.word, topic: wDrag.topic });
+    removeWord(wDrag.id);
+    checkComplete(sObj);
+    renderStack(sObj);
+
+  } else if (dragType === 'stack' && target.type === 'word') {
+    // stack → word: add word to stack
+    const sObj  = stacks.find(s => s.id === dragId);
+    const wTarget = words.find(w => w.id === target.id);
+    sObj.words.push({ word: wTarget.word, topic: wTarget.topic });
+    removeWord(wTarget.id);
+    checkComplete(sObj);
+    renderStack(sObj);
+
+  } else if (dragType === 'stack' && target.type === 'stack') {
+    // stack → stack: merge stacks
+    const sDrag   = stacks.find(s => s.id === dragId);
+    const sTarget = stacks.find(s => s.id === target.id);
+    sTarget.words.push(...sDrag.words);
+    removeStack(sDrag.id);
+    checkComplete(sTarget);
+    renderStack(sTarget);
+  }
+}
+
+function createStack(wordObjs, x, y) {
+  const sObj = {
+    id: nextId(),
+    words: wordObjs.map(w => ({ word: w.word, topic: w.topic })),
+    x, y,
+    complete: false,
+    el: null
+  };
+  stacks.push(sObj);
+  checkComplete(sObj);
+  renderStack(sObj);
+  return sObj;
+}
+
+function checkComplete(sObj) {
+  if (sObj.words.length >= 10) {
+    // check if all same topic
+    const topic = sObj.words[0].topic;
+    const allSame = sObj.words.every(w => w.topic === topic);
+    if (allSame) {
+      if (!sObj.complete) {
+        sObj.complete = true;
+        completedTopics++;
+        progressEl.textContent = completedTopics + ' / 10 topics solved';
+        // Move to completed zone after animation
+        setTimeout(() => moveToCompletedZone(sObj), 300);
+        spawnConfetti();
+        if (completedTopics === 10) {
+          setTimeout(() => showWin(), 800);
+        }
+      }
+    }
+  }
+}
+
+function moveToCompletedZone(sObj) {
+  // Place in completed zone - in canvas near top-left
+  const existingComplete = stacks.filter(s => s.complete && s.id !== sObj.id);
+  const col = existingComplete.length % 3;
+  const row = Math.floor(existingComplete.length / 3);
+  sObj.x = 22 + col * 120;
+  sObj.y = 22 + row * 80;
+  renderStack(sObj);
+}
+
+function removeWord(id) {
+  const idx = words.findIndex(w => w.id === id);
+  if (idx === -1) return;
+  words[idx].el.remove();
+  words.splice(idx, 1);
+}
+
+function removeStack(id) {
+  const idx = stacks.findIndex(s => s.id === id);
+  if (idx === -1) return;
+  stacks[idx].el.remove();
+  stacks.splice(idx, 1);
+}
+
+// ─── PAN ──────────────────────────────────────────────────────────────────────
+let isPanning = false;
+let panStart = { x: 0, y: 0, panX: 0, panY: 0 };
+
+wrap.addEventListener('mousedown', e => {
+  if (e.button === 1 || (e.button === 0 && !e.target.classList.contains('word-tile') && !e.target.closest('.stack'))) {
+    isPanning = true;
+    panStart = { x: e.clientX, y: e.clientY, panX, panY };
+    wrap.classList.add('panning');
+    e.preventDefault();
+  }
+});
+
+document.addEventListener('mousemove', e => {
+  if (!isPanning) return;
+  panX = panStart.panX + (e.clientX - panStart.x);
+  panY = panStart.panY + (e.clientY - panStart.y);
+  applyTransform();
+});
+
+document.addEventListener('mouseup', () => {
+  isPanning = false;
+  wrap.classList.remove('panning');
+});
+
+// ─── ZOOM ─────────────────────────────────────────────────────────────────────
+function setZoom(newZoom, originX, originY) {
+  const rect = wrap.getBoundingClientRect();
+  originX = originX ?? rect.width  / 2;
+  originY = originY ?? rect.height / 2;
+  // Canvas point under origin before zoom
+  const cx = (originX - panX) / zoom;
+  const cy = (originY - panY) / zoom;
+  zoom = Math.min(2, Math.max(0.25, newZoom));
+  // Adjust pan so canvas point stays fixed
+  panX = originX - cx * zoom;
+  panY = originY - cy * zoom;
+  applyTransform();
+  zoomLabel.textContent = Math.round(zoom * 100) + '%';
+}
+
+function applyTransform() {
+  canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+}
+
+wrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = wrap.getBoundingClientRect();
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  setZoom(zoom * factor, e.clientX - rect.left, e.clientY - rect.top);
+}, { passive: false });
+
+document.getElementById('zoom-in').addEventListener('click',  () => setZoom(zoom * 1.2));
+document.getElementById('zoom-out').addEventListener('click', () => setZoom(zoom / 1.2));
+document.getElementById('zoom-fit').addEventListener('click', () => {
+  zoom = 0.7; panX = 0; panY = 0;
+  applyTransform();
+  zoomLabel.textContent = '70%';
+});
+
+// ─── CONFETTI ─────────────────────────────────────────────────────────────────
+const confettiColors = ['#C4A25A','#7A5C3E','#3A2E1E','#9B8660','#D4C4A0','#5A7A4E'];
+function spawnConfetti() {
+  for (let i = 0; i < 28; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      el.style.left = (20 + Math.random() * 60) + 'vw';
+      el.style.top  = '-20px';
+      el.style.background = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+      el.style.animationDuration = (1.2 + Math.random() * 1.2) + 's';
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }, Math.random() * 400);
+  }
+}
+
+// ─── WIN SCREEN ───────────────────────────────────────────────────────────────
+function showWin() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(245,240,232,0.92);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:99999;font-family:Georgia,serif;
+  `;
+  overlay.innerHTML = `
+    <div style="font-size:36px;font-weight:bold;color:#3A2E1E;margin-bottom:16px;">Puzzle Complete!</div>
+    <div style="font-size:16px;color:#6B5A3E;margin-bottom:28px;">You found all 10 topics.</div>
+    <button onclick="resetGame()" style="padding:10px 28px;border:2px solid #3A2E1E;background:#F5F0E8;
+      border-radius:6px;font-size:15px;font-family:Georgia,serif;cursor:pointer;color:#3A2E1E;">
+      Play Again
+    </button>
+  `;
+  document.body.appendChild(overlay);
+  for (let i = 0; i < 6; i++) setTimeout(spawnConfetti, i * 300);
+}
+
+// ─── RESET ────────────────────────────────────────────────────────────────────
+function resetGame() {
+  // Remove all overlays
+  document.querySelectorAll('body > div:not(#ui-bar):not(#canvas-wrap)').forEach(el => el.remove());
+  // Clear canvas
+  canvas.querySelectorAll('.word-tile, .stack').forEach(el => el.remove());
+  words = []; stacks = []; completedTopics = 0; idCounter = 0;
+  progressEl.textContent = '0 / 10 topics solved';
+  zoom = 0.7; panX = 0; panY = 0;
+  applyTransform();
+  zoomLabel.textContent = '70%';
+  initWords();
+}
+
+document.getElementById('reset-btn').addEventListener('click', resetGame);
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+applyTransform();
+initWords();
+</script>
+</body>
+</html>
