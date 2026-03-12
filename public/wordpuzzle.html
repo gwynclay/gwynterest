@@ -159,8 +159,8 @@
 
   .stack-card {
     position: absolute;
-    background: #F5F0E8;
-    border: 1.5px solid #3A2E1E;
+    background: #C8A96E;
+    border: 1.5px solid #8B6528;
     border-radius: 5px;
     width: 90px;
     height: 32px;
@@ -169,12 +169,12 @@
 
   .stack-top {
     position: relative;
-    background: #F5F0E8;
-    border: 1.5px solid #3A2E1E;
+    background: #C8A96E;
+    border: 1.5px solid #8B6528;
     border-radius: 5px;
     padding: 5px 10px;
     font-size: 13px;
-    color: #1A1008;
+    color: #2A1500;
     font-family: Georgia, serif;
     white-space: nowrap;
     min-width: 64px;
@@ -190,8 +190,8 @@
   .stack-count {
     display: inline-block;
     margin-left: 5px;
-    background: #3A2E1E;
-    color: #F5F0E8;
+    background: #8B6528;
+    color: #FFF8EC;
     border-radius: 10px;
     font-size: 10px;
     padding: 0 5px;
@@ -201,14 +201,15 @@
   }
 
   .stack.complete .stack-top {
-    background: #3A2E1E;
-    color: #F5F0E8;
+    background: #3A7A42;
+    color: #F0FFF2;
+    border-color: #1A5028;
     font-weight: bold;
     font-size: 12px;
   }
   .stack.complete .stack-card {
-    background: #5A4A2E;
-    border-color: #1A1008;
+    background: #5AAA62;
+    border-color: #1A5028;
   }
 
   .stack-label {
@@ -238,7 +239,7 @@
 
 <div id="ui-bar">
   <h1>Word Stack Puzzle</h1>
-  <span id="progress-text">0 / 10 topics solved</span>
+  <span id="progress-text">0 / 15 topics solved</span>
   <div id="zoom-controls">
     <button id="zoom-out">−</button>
     <span id="zoom-label">70%</span>
@@ -257,16 +258,21 @@
 <script>
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 const TOPICS = {
-  "Animals":     ["Lion","Tiger","Elephant","Giraffe","Zebra","Penguin","Dolphin","Eagle","Cobra","Wolf"],
-  "Countries":   ["France","Brazil","Japan","Canada","Egypt","India","Australia","Mexico","Norway","Kenya"],
-  "Colors":      ["Crimson","Azure","Emerald","Amber","Violet","Scarlet","Indigo","Teal","Coral","Ochre"],
-  "Sports":      ["Tennis","Cricket","Football","Basketball","Rugby","Golf","Swimming","Cycling","Boxing","Archery"],
-  "Fruits":      ["Mango","Papaya","Lychee","Guava","Durian","Fig","Kiwi","Pomelo","Persimmon","Jackfruit"],
-  "Planets":     ["Mercury","Venus","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto","Ceres","Eris"],
-  "Instruments": ["Violin","Cello","Trumpet","Oboe","Harp","Tuba","Banjo","Sitar","Lute","Zither"],
-  "Elements":    ["Oxygen","Carbon","Helium","Nitrogen","Iron","Gold","Silver","Copper","Uranium","Neon"],
-  "Mythology":   ["Zeus","Thor","Ra","Odin","Athena","Loki","Anubis","Poseidon","Freya","Ares"],
-  "Flowers":     ["Rose","Tulip","Orchid","Dahlia","Peony","Lotus","Jasmine","Lavender","Iris","Magnolia"]
+  "Animals":     ["Lion","Tiger","Elephant","Giraffe","Zebra","Penguin","Dolphin","Eagle","Cobra","Wolf","Cheetah","Gorilla","Panda","Jaguar","Flamingo"],
+  "Countries":   ["France","Brazil","Japan","Canada","Egypt","India","Australia","Mexico","Norway","Kenya","Argentina","Sweden","Thailand","Morocco","Portugal"],
+  "Colors":      ["Crimson","Azure","Emerald","Amber","Violet","Scarlet","Indigo","Teal","Coral","Ochre","Magenta","Cyan","Burgundy","Chartreuse","Vermillion"],
+  "Sports":      ["Tennis","Cricket","Football","Basketball","Rugby","Golf","Swimming","Cycling","Boxing","Archery","Volleyball","Badminton","Wrestling","Fencing","Rowing"],
+  "Fruits":      ["Mango","Papaya","Lychee","Guava","Durian","Fig","Kiwi","Pomelo","Persimmon","Jackfruit","Dragonfruit","Starfruit","Rambutan","Soursop","Cherimoya"],
+  "Planets":     ["Mercury","Venus","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto","Ceres","Eris","Makemake","Haumea","Sedna","Orcus","Quaoar"],
+  "Instruments": ["Violin","Cello","Trumpet","Oboe","Harp","Tuba","Banjo","Sitar","Lute","Zither","Dulcimer","Theremin","Mandolin","Harpsichord","Didgeridoo"],
+  "Elements":    ["Oxygen","Carbon","Helium","Nitrogen","Iron","Gold","Silver","Copper","Uranium","Neon","Platinum","Lithium","Titanium","Xenon","Cobalt"],
+  "Mythology":   ["Zeus","Thor","Ra","Odin","Athena","Loki","Anubis","Poseidon","Freya","Ares","Hermes","Apollo","Osiris","Vishnu","Quetzalcoatl"],
+  "Flowers":     ["Rose","Tulip","Orchid","Dahlia","Peony","Lotus","Jasmine","Lavender","Iris","Magnolia","Wisteria","Foxglove","Primrose","Snapdragon","Chrysanthemum"],
+  "Trees":       ["Oak","Willow","Maple","Cedar","Birch","Redwood","Walnut","Ash","Yew","Pine","Beech","Cypress","Elm","Chestnut","Sycamore"],
+  "Gemstones":   ["Diamond","Ruby","Sapphire","Jade","Opal","Topaz","Garnet","Amethyst","Onyx","Pearl","Turquoise","Citrine","Tanzanite","Alexandrite","Malachite"],
+  "Composers":   ["Bach","Mozart","Beethoven","Chopin","Vivaldi","Handel","Brahms","Schubert","Liszt","Debussy","Tchaikovsky","Wagner","Haydn","Mahler","Ravel"],
+  "Currencies":  ["Dollar","Euro","Pound","Yen","Rupee","Franc","Ruble","Krona","Peso","Dinar","Baht","Won","Zloty","Forint","Dirham"],
+  "Dances":      ["Waltz","Tango","Salsa","Ballet","Flamenco","Samba","Foxtrot","Polka","Rumba","Jive","Mambo","Quickstep","Bolero","Cha-cha","Merengue"]
 };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
@@ -276,6 +282,7 @@ let words = [];   // { id, word, topic, el, x, y }
 let stacks = [];  // { id, words:[{word,topic}], el, x, y, complete }
 let completedTopics = 0;
 let idCounter = 0;
+let marginNextY = 20; // next y slot in the left stack margin
 
 const canvas     = document.getElementById('canvas');
 const wrap       = document.getElementById('canvas-wrap');
@@ -309,9 +316,9 @@ function initWords() {
     [allWords[i], allWords[j]] = [allWords[j], allWords[i]];
   }
 
-  // Place shuffled words in a 10×10 grid
-  // Start at column 4 to leave room for the completed zone on the left
-  const COLS = 10;
+  // Place shuffled words in a 15×15 grid
+  // Start at column 4 to leave room for the stack margin on the left
+  const COLS = 15;
   const startCol = 4;
   const offsetX = 20, offsetY = 20;
 
@@ -537,7 +544,7 @@ function performDrop(dragType, dragId, target) {
     // word → word: create new stack
     const wDrag   = words.find(w => w.id === dragId);
     const wTarget = words.find(w => w.id === target.id);
-    createStack([wTarget, wDrag], wTarget.x, wTarget.y);
+    createStack([wTarget, wDrag]);
     removeWord(wDrag.id);
     removeWord(wTarget.id);
 
@@ -570,7 +577,14 @@ function performDrop(dragType, dragId, target) {
   }
 }
 
-function createStack(wordObjs, x, y) {
+const MARGIN_X = 20;
+const MARGIN_STEP = GRID_ROW * 2; // 96px between stacks in the margin
+
+function createStack(wordObjs) {
+  // New stacks always go into the left margin column
+  const x = MARGIN_X;
+  const y = marginNextY;
+  marginNextY += MARGIN_STEP;
   const sObj = {
     id: nextId(),
     words: wordObjs.map(w => ({ word: w.word, topic: w.topic })),
@@ -585,17 +599,16 @@ function createStack(wordObjs, x, y) {
 }
 
 function checkComplete(sObj) {
-  if (sObj.words.length >= 10) {
-    // check if all same topic
+  if (sObj.words.length >= 15) {
     const topic = sObj.words[0].topic;
     const allSame = sObj.words.every(w => w.topic === topic);
     if (allSame) {
       if (!sObj.complete) {
         sObj.complete = true;
         completedTopics++;
-        progressEl.textContent = completedTopics + ' / 10 topics solved';
+        progressEl.textContent = completedTopics + ' / 15 topics solved';
         spawnConfetti();
-        if (completedTopics === 10) {
+        if (completedTopics === 15) {
           setTimeout(() => showWin(), 800);
         }
       }
@@ -714,7 +727,7 @@ function showWin() {
   `;
   overlay.innerHTML = `
     <div style="font-size:36px;font-weight:bold;color:#3A2E1E;margin-bottom:16px;">Puzzle Complete!</div>
-    <div style="font-size:16px;color:#6B5A3E;margin-bottom:28px;">You found all 10 topics.</div>
+    <div style="font-size:16px;color:#6B5A3E;margin-bottom:28px;">You found all 15 topics.</div>
     <button onclick="resetGame()" style="padding:10px 28px;border:2px solid #3A2E1E;background:#F5F0E8;
       border-radius:6px;font-size:15px;font-family:Georgia,serif;cursor:pointer;color:#3A2E1E;">
       Play Again
@@ -730,8 +743,8 @@ function resetGame() {
   document.querySelectorAll('body > div:not(#ui-bar):not(#canvas-wrap)').forEach(el => el.remove());
   // Clear canvas
   canvas.querySelectorAll('.word-tile, .stack').forEach(el => el.remove());
-  words = []; stacks = []; completedTopics = 0; idCounter = 0;
-  progressEl.textContent = '0 / 10 topics solved';
+  words = []; stacks = []; completedTopics = 0; idCounter = 0; marginNextY = 20;
+  progressEl.textContent = '0 / 15 topics solved';
   zoom = 0.7; panX = 0; panY = 0;
   applyTransform();
   zoomLabel.textContent = '70%';
