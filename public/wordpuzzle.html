@@ -309,27 +309,17 @@ function initWords() {
     [allWords[i], allWords[j]] = [allWords[j], allWords[i]];
   }
 
-  // Build a grid of available cells (avoid top-left completed zone: cols 0-2, rows 0-3)
-  const COLS = 22, ROWS = 44;
-  const startCol = 4; // leave columns 0-3 for completed zone
-  const cells = [];
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (c < startCol && r < 5) continue; // skip completed zone
-      cells.push({ c, r });
-    }
-  }
-  // Shuffle cells and take first 100
-  for (let i = cells.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [cells[i], cells[j]] = [cells[j], cells[i]];
-  }
-
+  // Place shuffled words in a structured left-to-right, top-to-bottom grid
+  // Start at column 4 to leave room for the completed zone on the left
+  const COLS = 18;
+  const startCol = 4;
   const offsetX = 20, offsetY = 20;
+
   allWords.forEach((w, i) => {
-    const cell = cells[i] || { c: i % COLS, r: Math.floor(i / COLS) };
-    const x = offsetX + cell.c * GRID_COL;
-    const y = offsetY + cell.r * GRID_ROW;
+    const col = startCol + (i % COLS);
+    const row = Math.floor(i / COLS);
+    const x = offsetX + col * GRID_COL;
+    const y = offsetY + row * GRID_ROW;
     const obj = { id: nextId(), word: w.word, topic: w.topic, x, y, el: null };
     words.push(obj);
     createWordEl(obj);
@@ -529,6 +519,20 @@ function findDropTarget(clientX, clientY, dragType, dragId) {
 }
 
 function performDrop(dragType, dragId, target) {
+  // Reject drops that mix categories
+  const dragTopic = dragType === 'word'
+    ? words.find(w => w.id === dragId)?.topic
+    : stacks.find(s => s.id === dragId)?.words[0]?.topic;
+  const targetTopic = target.type === 'word'
+    ? words.find(w => w.id === target.id)?.topic
+    : stacks.find(s => s.id === target.id)?.words[0]?.topic;
+  if (dragTopic !== targetTopic) {
+    // Snap dragged item back to its original position
+    dragState.el.style.left = dragState.startObjX + 'px';
+    dragState.el.style.top  = dragState.startObjY + 'px';
+    return;
+  }
+
   if (dragType === 'word' && target.type === 'word') {
     // word → word: create new stack
     const wDrag   = words.find(w => w.id === dragId);
