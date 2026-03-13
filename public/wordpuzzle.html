@@ -233,6 +233,71 @@
     0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
     100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
   }
+
+  /* ── Splash screen ── */
+  #splash {
+    position: fixed;
+    inset: 0;
+    background: #140C04;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    cursor: pointer;
+    transition: opacity 0.7s ease;
+  }
+  #splash-inner { text-align: center; }
+
+  #splash-rule {
+    width: 200px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #8B6528, transparent);
+    margin: 0 auto 24px;
+  }
+  #splash-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 80px;
+    font-weight: bold;
+    color: #C8A96E;
+    letter-spacing: 8px;
+    line-height: 1.05;
+    text-shadow:
+      0 0 40px rgba(200,169,110,0.35),
+      0 2px 0 #5A3E10,
+      0 4px 18px rgba(0,0,0,0.7);
+  }
+  #splash-ornament {
+    font-size: 22px;
+    color: #6B4E1A;
+    letter-spacing: 12px;
+    margin: 10px 0 6px;
+  }
+  #splash-sub {
+    font-family: Georgia, serif;
+    font-size: 15px;
+    color: #8B6528;
+    letter-spacing: 5px;
+    font-style: italic;
+    margin-top: 8px;
+  }
+  #splash-rule2 {
+    width: 120px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #6B4E1A, transparent);
+    margin: 20px auto 0;
+  }
+  #splash-hint {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    color: #5A3E1E;
+    letter-spacing: 2px;
+    margin-top: 40px;
+    animation: hint-pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes hint-pulse {
+    0%, 100% { opacity: 0.35; }
+    50%       { opacity: 0.9; }
+  }
 </style>
 </head>
 <body>
@@ -247,6 +312,17 @@
     <button id="zoom-fit">Fit</button>
   </div>
   <button id="reset-btn">Reset</button>
+</div>
+
+<div id="splash">
+  <div id="splash-inner">
+    <div id="splash-rule"></div>
+    <div id="splash-title">DOZEN<br>DOZEN</div>
+    <div id="splash-ornament">✦ ✦ ✦</div>
+    <div id="splash-sub">March 2026</div>
+    <div id="splash-rule2"></div>
+    <div id="splash-hint">click anywhere to play</div>
+  </div>
 </div>
 
 <div id="canvas-wrap">
@@ -352,37 +428,56 @@ function renderStack(sObj) {
 
   const behind = Math.min(sObj.words.length - 1, MAX_VISIBLE_BEHIND);
   const totalH = behind * CARD_OFFSET + 32;
-  el.style.width = '110px';
-  el.style.height = (totalH + 20) + 'px'; // extra for label
+  el.style.height = (totalH + 20) + 'px';
+
+  if (sObj.complete) {
+    // Width is auto-sized to fit the category name; cards sized via rAF
+    el.style.width = 'max-content';
+  } else {
+    el.style.width = '110px';
+  }
 
   // Shadow cards
   for (let i = behind; i >= 1; i--) {
     const card = document.createElement('div');
     card.className = 'stack-card';
     card.style.top  = (behind - i) * CARD_OFFSET + 'px';
-    card.style.left = '10px';
+    card.style.left = sObj.complete ? '0' : '10px';
     el.appendChild(card);
   }
 
   // Top card
   const top = document.createElement('div');
   top.className = 'stack-top';
+  top.style.top = behind * CARD_OFFSET + 'px';
   if (sObj.complete) {
-    // Show topic name
     top.textContent = sObj.words[0].topic;
+    top.style.padding = '5px 16px';
+    // No explicit width or left — position:relative flows to fill container
   } else {
     const topWord = sObj.words[sObj.words.length - 1];
     top.innerHTML = topWord.word + '<span class="stack-count">' + sObj.words.length + '</span>';
+    top.style.left  = '10px';
+    top.style.width = '90px';
   }
-  top.style.top  = behind * CARD_OFFSET + 'px';
-  top.style.left = '10px';
-  top.style.width = '90px';
   el.appendChild(top);
 
   el.style.left = sObj.x + 'px';
   el.style.top  = sObj.y + 'px';
   canvas.appendChild(el);
   sObj.el = el;
+
+  if (sObj.complete) {
+    // Sync absolute shadow-card widths to match the rendered top width
+    requestAnimationFrame(() => {
+      const w = top.offsetWidth;
+      el.querySelectorAll('.stack-card').forEach(c => {
+        c.style.width = w + 'px';
+        c.style.left  = '0';
+      });
+      el.style.width = w + 'px';
+    });
+  }
 
   makeDraggable(el, 'stack', sObj.id);
 }
@@ -474,6 +569,7 @@ document.addEventListener('mouseup', e => {
     dragState.el.style.top  = snapped.y + 'px';
   }
   dragState = null;
+  saveState();
 });
 
 function clearDropTargets() {
@@ -628,6 +724,47 @@ function removeStack(id) {
   stacks.splice(idx, 1);
 }
 
+// ─── PERSISTENCE ──────────────────────────────────────────────────────────────
+const SAVE_KEY = 'dozendozen_v1';
+
+function saveState() {
+  try {
+    const state = {
+      words:  words.map(w => ({ word: w.word, topic: w.topic, x: w.x, y: w.y })),
+      stacks: stacks.map(s => ({ words: s.words, x: s.x, y: s.y, complete: s.complete })),
+      completedTopics, zoom, panX, panY
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+    if (!Array.isArray(state.words) || !Array.isArray(state.stacks)) return false;
+    completedTopics = state.completedTopics || 0;
+    zoom = state.zoom || 0.7;
+    panX = state.panX || 0;
+    panY = state.panY || 0;
+    applyTransform();
+    zoomLabel.textContent = Math.round(zoom * 100) + '%';
+    progressEl.textContent = completedTopics + ' / 12 topics solved';
+    for (const w of state.words) {
+      const obj = { id: nextId(), word: w.word, topic: w.topic, x: w.x, y: w.y, el: null };
+      words.push(obj);
+      createWordEl(obj);
+    }
+    for (const s of state.stacks) {
+      const sObj = { id: nextId(), words: s.words, x: s.x, y: s.y, complete: s.complete, el: null };
+      stacks.push(sObj);
+      renderStack(sObj);
+    }
+    return true;
+  } catch(e) { return false; }
+}
+
 // ─── PAN ──────────────────────────────────────────────────────────────────────
 let isPanning = false;
 let panStart = { x: 0, y: 0, panX: 0, panY: 0 };
@@ -649,6 +786,7 @@ document.addEventListener('mousemove', e => {
 });
 
 document.addEventListener('mouseup', () => {
+  if (isPanning) saveState();
   isPanning = false;
   wrap.classList.remove('panning');
 });
@@ -732,6 +870,7 @@ function resetGame() {
   // Clear canvas
   canvas.querySelectorAll('.word-tile, .stack').forEach(el => el.remove());
   words = []; stacks = []; completedTopics = 0; idCounter = 0;
+  try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
   progressEl.textContent = '0 / 12 topics solved';
   zoom = 0.7; panX = 0; panY = 0;
   applyTransform();
@@ -741,9 +880,21 @@ function resetGame() {
 
 document.getElementById('reset-btn').addEventListener('click', resetGame);
 
+// ─── SPLASH ───────────────────────────────────────────────────────────────────
+(function() {
+  const splash = document.getElementById('splash');
+  function dismiss() {
+    splash.style.opacity = '0';
+    setTimeout(() => splash.remove(), 700);
+  }
+  splash.addEventListener('click', dismiss);
+  // Auto-dismiss after 6 seconds if user doesn't click
+  setTimeout(dismiss, 6000);
+})();
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 applyTransform();
-initWords();
+if (!loadState()) initWords();
 </script>
 </body>
 </html>
